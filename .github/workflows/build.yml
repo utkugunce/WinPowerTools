@@ -1,0 +1,36 @@
+name: Build & Release WinPowerTools Suite
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish
+        run: |
+          dotnet publish ./WinPowerTools.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ./publish
+          copy ./icon.ico ./publish/
+          Compress-Archive -Path ./publish/* -DestinationPath ./WinPowerTools-win-x64.zip
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ./WinPowerTools-win-x64.zip
+          generate_release_notes: true
